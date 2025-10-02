@@ -1,0 +1,98 @@
+import tkinter as tk
+from tkinter import messagebox
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+
+
+class SpeedometerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Compteur de vitesse")
+
+        # Entrée utilisateur
+        self.label = tk.Label(root, text="Entrez un entier entre -20 et 50 :")
+        self.label.pack(pady=5)
+
+        self.entry = tk.Entry(root)
+        self.entry.pack(pady=5)
+
+        self.button = tk.Button(root, text="Afficher le compteur", command=self.update_gauge)
+        self.button.pack(pady=10)
+
+        # Figure matplotlib
+        self.fig, self.ax = plt.subplots(figsize=(5, 3), subplot_kw={'aspect': 'equal'})
+        self.canvas = FigureCanvasTkAgg(self.fig, master=root)
+        self.canvas.get_tk_widget().pack()
+
+        # Valeur initiale
+        self.draw_gauge(0)
+
+    def draw_gauge(self, value):
+        self.ax.clear()
+
+        # Paramètres du demi-cercle
+        start_angle = 180  # degrés
+        end_angle = 0
+        radius = 1.0
+
+        # Dessin du demi-cercle
+        theta = np.linspace(np.radians(start_angle), np.radians(end_angle), 300)
+        x = radius * np.cos(theta)
+        y = radius * np.sin(theta)
+        self.ax.plot(x, y, 'k-', lw=3)
+
+        # Repères gradués (toutes les 10 unités entre -20 et 50)
+        ticks = np.linspace(-20, 50, 8)
+        angles = np.linspace(np.pi, 0, len(ticks))
+
+        for t, a in zip(ticks, angles):
+            xtick = 1.1 * np.cos(a)
+            ytick = 1.1 * np.sin(a)
+            self.ax.text(xtick, ytick, f"{int(t)}",
+                         horizontalalignment='center',
+                         verticalalignment='center',
+                         fontsize=10)
+
+        # Calcul angle aiguille (mappe [-20,50] -> [pi,0])
+        if value < -20:
+            value = -20
+        if value > 50:
+            value = 50
+
+        angle = np.interp(value, [-20, 50], [np.pi, 0])
+
+        # Coordonnées aiguille
+        x_arrow = [0, 0.9 * np.cos(angle)]
+        y_arrow = [0, 0.9 * np.sin(angle)]
+
+        # Dessin aiguille
+        self.ax.plot(x_arrow, y_arrow, 'r-', lw=4)
+
+        # Cercle centre
+        centre_circle = plt.Circle((0, 0), 0.05, color='k')
+        self.ax.add_patch(centre_circle)
+
+        # Mise en forme
+        self.ax.set_xlim(-1.2, 1.2)
+        self.ax.set_ylim(-0.2, 1.2)
+        self.ax.axis('off')
+        self.ax.set_aspect('equal')
+
+        self.fig.tight_layout()
+        self.canvas.draw()
+
+    def update_gauge(self):
+        try:
+            value = int(self.entry.get())
+            if value < -20 or value > 50:
+                raise ValueError
+            self.draw_gauge(value)
+        except ValueError:
+            messagebox.showerror("Erreur", "Veuillez entrer un entier valide entre -20 et 50.")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = SpeedometerApp(root)
+    root.mainloop()
